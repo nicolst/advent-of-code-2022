@@ -34,8 +34,8 @@ for r in range(height):
             leftmax = numeric_forest[r, width - c - 1]
 
 for c in range(width):
-    upidx = np.full((10), 0j)
-    downidx = np.full((10), 0j)
+    upidx = np.full((10), 0)
+    downidx = np.full((10), 0)
 
     downmax = -1
     upmax = -1
