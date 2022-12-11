@@ -2,31 +2,33 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 )
 
-var gcd = 1
+var largest uint = 0
 
 type Monkey struct {
-	Inspected  int
-	Items      []int
-	Op         func(old int) int
-	Test       func(item int) bool
+	Inspected  uint
+	Items      []*big.Int
+	Op         func(old *big.Int)
+	Test       func(item *big.Int) bool
 	Next       map[bool]*Monkey
 	LessStress bool
 }
 
 func (m *Monkey) turn(stress bool) {
 	for _, item := range m.Items {
-		item = m.Op(item)
+        fmt.Print(item, "->")
+		m.Op(item)
+        fmt.Println(item)
 		if !stress {
-			item /= 3
+			item.Div(item, big.NewInt(3))
 		}
 		test := m.Test(item)
-        item = item % gcd
 		m.Inspected++
 		m.Next[test].Items = append(m.Next[test].Items, item)
 		m.Items = m.Items[1:]
@@ -44,9 +46,9 @@ func attrVal(attr string) string {
 	return strings.Split(attr, ": ")[1]
 }
 
-var Ops = map[string]func(i, j int) int{
-	"+": func(i, j int) int { return i + j },
-	"*": func(i, j int) int { return i * j },
+var Ops = map[string]func(i, j *big.Int) {
+	"+": func(i, j *big.Int) { i.Add(i, j) },
+	"*": func(i, j *big.Int) { i.Mul(i, j) },
 }
 
 func getLast(line string) int {
@@ -58,7 +60,6 @@ func getLast(line string) int {
 
 func getMonkeys(input string) []Monkey {
 	sections := strings.Split(input, "\n\n")
-    gcd = 1
 
 	monkeys := make([]Monkey, len(sections))
 
@@ -70,21 +71,24 @@ func getMonkeys(input string) []Monkey {
 		for _, item := range items {
 			iitem, err := strconv.Atoi(item)
 			check(err)
-			monkey.Items = append(monkey.Items, iitem)
+			monkey.Items = append(monkey.Items, big.NewInt(int64(iitem)))
 		}
 
 		ops := strings.Split(strings.Split(attrVal(monkeyAttrs[2]), "= ")[1], " ")
 		if ops[2] == "old" {
-			monkey.Op = func(item int) int { return Ops[ops[1]](item, item) }
+			monkey.Op = func(item *big.Int) { Ops[ops[1]](item, item) }
 		} else {
 			val, err := strconv.Atoi(ops[2])
 			check(err)
-			monkey.Op = func(item int) int { return Ops[ops[1]](item, val) }
+			monkey.Op = func(item *big.Int) { Ops[ops[1]](item, big.NewInt(int64(val))) }
 		}
 
 		testVal := getLast(monkeyAttrs[3])
-        gcd *= testVal
-		monkey.Test = func(item int) bool { return item%testVal == 0 }
+		monkey.Test = func(item *big.Int) bool { 
+            z := big.NewInt(0)
+            z.Mod(item, big.NewInt(int64(testVal)))
+            return z == big.NewInt(0)
+        }
 
 		monkey.Next = map[bool]*Monkey{}
 		monkey.Next[true] = &monkeys[getLast(monkeyAttrs[4])]
@@ -94,7 +98,7 @@ func getMonkeys(input string) []Monkey {
 	return monkeys
 }
 
-func monkeyBusiness(input string, rounds int, stress bool) int {
+func monkeyBusiness(input string, rounds int, stress bool) uint {
 	monkeys := getMonkeys(input)
 
 	for round := 0; round < rounds; round++ {
@@ -105,12 +109,16 @@ func monkeyBusiness(input string, rounds int, stress bool) int {
 
 	sort.Slice(monkeys, func(i, j int) bool { return monkeys[i].Inspected > monkeys[j].Inspected })
 
+    for _, monkey := range monkeys {
+        fmt.Print(monkey.Inspected, " ")
+    }
+
 	return monkeys[0].Inspected * monkeys[1].Inspected
 
 }
 
 func main() {
-	fb, err := os.ReadFile("input.txt")
+	fb, err := os.ReadFile("test.txt")
 	check(err)
 
 	input := string(fb)
@@ -119,6 +127,10 @@ func main() {
     fmt.Printf("Part 1 monkey business: %d\n", monkeyBusiness(input, 20, false))
 
 	// Part 2
-    fmt.Printf("Part 2 monkey business: %d\n", monkeyBusiness(input, 10000, true))
+    // fmt.Printf("Part 2 monkey business: %d\n", monkeyBusiness(input, 10000, true))
+     fmt.Println(largest)
 
 }
+
+
+
